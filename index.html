@@ -1,0 +1,1209 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flashly — Seus Flashcards</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<style>
+:root {
+  --bg: #0f0f13;
+  --surface: #16161d;
+  --surface2: #1e1e28;
+  --surface3: #26263a;
+  --border: rgba(255,255,255,0.07);
+  --border2: rgba(255,255,255,0.13);
+  --text: #e8e6f0;
+  --text2: #9a98b0;
+  --text3: #5a5870;
+  --accent: #7c6af7;
+  --accent2: #a594ff;
+  --accent-glow: rgba(124,106,247,0.18);
+  --green: #4ade80;
+  --yellow: #fbbf24;
+  --red: #f87171;
+  --green-bg: rgba(74,222,128,0.1);
+  --yellow-bg: rgba(251,191,36,0.1);
+  --red-bg: rgba(248,113,113,0.1);
+  --radius: 14px;
+  --radius-sm: 8px;
+  --font-serif: 'DM Serif Display', serif;
+  --font-sans: 'DM Sans', sans-serif;
+  --nav-bg: rgba(15,15,19,0.92);
+}
+
+:root.light {
+  --bg: #f5f4f8;
+  --surface: #ffffff;
+  --surface2: #f0eef8;
+  --surface3: #e4e1f5;
+  --border: rgba(0,0,0,0.07);
+  --border2: rgba(0,0,0,0.13);
+  --text: #18171f;
+  --text2: #5a5870;
+  --text3: #9a98b0;
+  --accent: #6b58e8;
+  --accent2: #5544cc;
+  --accent-glow: rgba(107,88,232,0.12);
+  --green: #16a34a;
+  --yellow: #d97706;
+  --red: #dc2626;
+  --green-bg: rgba(22,163,74,0.08);
+  --yellow-bg: rgba(217,119,6,0.08);
+  --red-bg: rgba(220,38,38,0.08);
+  --nav-bg: rgba(245,244,248,0.92);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.6;
+  transition: background 0.35s ease, color 0.35s ease;
+}
+
+*, *::before, *::after {
+  transition: background-color 0.35s ease, border-color 0.35s ease, color 0.35s ease, box-shadow 0.35s ease;
+}
+
+/* ── NAV ── */
+nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2rem;
+  height: 64px;
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  background: var(--nav-bg);
+  backdrop-filter: blur(12px);
+  z-index: 100;
+}
+
+.logo {
+  font-family: var(--font-serif);
+  font-size: 1.4rem;
+  color: var(--text);
+  letter-spacing: -0.02em;
+}
+.logo span { color: var(--accent2); }
+
+.nav-links { display: flex; gap: 4px; }
+.nav-btn {
+  background: none;
+  border: none;
+  color: var(--text2);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 6px 14px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.nav-btn:hover { background: var(--surface2); color: var(--text); }
+.nav-btn.active { background: var(--surface3); color: var(--accent2); }
+
+.theme-toggle {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1px solid var(--border2);
+  background: var(--surface2);
+  color: var(--text2);
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+.theme-toggle:hover {
+  background: var(--surface3);
+  color: var(--text);
+  border-color: var(--accent);
+  transform: rotate(20deg);
+}
+
+/* ── LAYOUT ── */
+main { max-width: 860px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+.page { display: none; }
+.page.active { display: block; }
+
+/* ── HERO ── */
+.hero {
+  text-align: center;
+  padding: 3rem 0 2rem;
+}
+.hero h1 {
+  font-family: var(--font-serif);
+  font-size: clamp(2rem, 5vw, 3rem);
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  margin-bottom: 0.5rem;
+}
+.hero p { color: var(--text2); font-size: 1rem; }
+
+/* ── REVIEW CARD ── */
+.review-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+.review-meta .label { color: var(--text2); font-size: 0.8rem; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; }
+.review-count { font-family: var(--font-serif); font-size: 1.8rem; color: var(--accent2); }
+
+.flip-scene {
+  perspective: 1200px;
+  margin-bottom: 1.5rem;
+  cursor: pointer;
+}
+.flip-card {
+  width: 100%;
+  min-height: 240px;
+  position: relative;
+  transform-style: preserve-3d;
+  transition: transform 0.55s cubic-bezier(0.4,0.2,0.2,1);
+}
+.flip-card.flipped { transform: rotateY(180deg); }
+
+.card-face {
+  position: absolute;
+  width: 100%;
+  min-height: 240px;
+  backface-visibility: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2.5rem 2rem;
+  text-align: center;
+  transition: border-color 0.2s;
+}
+.card-face:hover { border-color: var(--accent); }
+.flip-scene:hover .card-face { border-color: rgba(124,106,247,0.5); }
+
+.card-face.back {
+  transform: rotateY(180deg);
+  background: var(--surface2);
+}
+
+.card-label {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text3);
+  margin-bottom: 1rem;
+}
+.card-text {
+  font-size: 1.15rem;
+  line-height: 1.65;
+  color: var(--text);
+  font-weight: 400;
+}
+.card-hint {
+  margin-top: 1.5rem;
+  font-size: 0.78rem;
+  color: var(--text3);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.answer-btns {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+  margin-top: 0.5rem;
+}
+.answer-btn {
+  padding: 14px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.answer-btn .sub { font-size: 0.7rem; font-weight: 400; opacity: 0.7; }
+.btn-hard { background: var(--red-bg); color: var(--red); border-color: rgba(248,113,113,0.2); }
+.btn-hard:hover { background: rgba(248,113,113,0.18); border-color: var(--red); }
+.btn-medium { background: var(--yellow-bg); color: var(--yellow); border-color: rgba(251,191,36,0.2); }
+.btn-medium:hover { background: rgba(251,191,36,0.18); border-color: var(--yellow); }
+.btn-easy { background: var(--green-bg); color: var(--green); border-color: rgba(74,222,128,0.2); }
+.btn-easy:hover { background: rgba(74,222,128,0.18); border-color: var(--green); }
+
+.answer-btns.hidden { display: none; }
+
+/* ── COMPLETION ── */
+.completion {
+  text-align: center;
+  padding: 4rem 2rem;
+  display: none;
+}
+.completion.active { display: block; }
+.completion h2 { font-family: var(--font-serif); font-size: 2rem; margin-bottom: 0.5rem; }
+.completion p { color: var(--text2); margin-bottom: 2rem; }
+
+/* ── BARALHOS ── */
+.baralhos-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+.baralhos-header h2 { font-family: var(--font-serif); font-size: 1.6rem; }
+
+.baralhos-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.baralho-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem 1.4rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+.baralho-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--accent);
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.baralho-card:hover { border-color: var(--border2); transform: translateY(-2px); }
+.baralho-card:hover::before { opacity: 1; }
+
+.baralho-materia {
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent2);
+  margin-bottom: 0.5rem;
+}
+.baralho-titulo { font-size: 1rem; font-weight: 600; margin-bottom: 0.75rem; line-height: 1.35; }
+.baralho-stats { display: flex; gap: 12px; }
+.baralho-stat { font-size: 0.78rem; color: var(--text2); }
+.baralho-stat strong { color: var(--text); font-weight: 600; }
+
+.baralho-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+.baralho-action-btn {
+  flex: 1;
+  padding: 7px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: none;
+  color: var(--text2);
+  font-family: var(--font-sans);
+  font-size: 0.78rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.baralho-action-btn:hover { background: var(--surface2); color: var(--text); border-color: var(--border2); }
+.baralho-action-btn.primary { border-color: var(--accent); color: var(--accent2); }
+.baralho-action-btn.primary:hover { background: var(--accent-glow); }
+.baralho-action-btn.danger:hover { color: var(--red); border-color: var(--red); background: var(--red-bg); }
+
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: var(--text3);
+}
+.empty-state h3 { font-family: var(--font-serif); font-size: 1.4rem; color: var(--text2); margin-bottom: 0.5rem; }
+
+/* ── CRIAR ── */
+.criar-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+  margin-bottom: 2rem;
+}
+.criar-option {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-align: center;
+}
+.criar-option:hover { border-color: var(--accent); background: var(--surface2); }
+.criar-option.selected { border-color: var(--accent); background: var(--accent-glow); }
+.criar-option .icon { font-size: 2rem; margin-bottom: 0.75rem; }
+.criar-option h3 { font-size: 0.95rem; font-weight: 600; margin-bottom: 0.25rem; }
+.criar-option p { font-size: 0.78rem; color: var(--text2); }
+
+/* ── FORM ── */
+.form-section { margin-bottom: 1.5rem; }
+.form-label {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: var(--text2);
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+}
+.form-input, .form-textarea, .form-select {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  padding: 11px 14px;
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  transition: border-color 0.15s;
+  outline: none;
+}
+.form-input:focus, .form-textarea:focus, .form-select:focus { border-color: var(--accent); }
+.form-textarea { min-height: 120px; resize: vertical; line-height: 1.6; }
+.form-select { cursor: pointer; }
+.form-select option { background: var(--surface2); }
+
+.upload-zone {
+  border: 1.5px dashed var(--border2);
+  border-radius: var(--radius);
+  padding: 2.5rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  color: var(--text2);
+}
+.upload-zone:hover, .upload-zone.dragover { border-color: var(--accent); color: var(--accent2); background: var(--accent-glow); }
+.upload-zone .upload-icon { font-size: 2rem; margin-bottom: 0.75rem; }
+.upload-zone p { font-size: 0.875rem; }
+.upload-zone input { display: none; }
+
+.upload-status {
+  margin-top: 0.75rem;
+  font-size: 0.82rem;
+  color: var(--green);
+  display: none;
+}
+.upload-status.visible { display: block; }
+
+/* ── BOTÕES ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 20px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border2);
+  background: none;
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.btn:hover { background: var(--surface2); border-color: var(--border2); }
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+.btn-primary:hover { background: var(--accent2); border-color: var(--accent2); }
+.btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-full { width: 100%; justify-content: center; }
+
+/* ── PROGRESSO ── */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 2rem;
+}
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  text-align: center;
+}
+.stat-value { font-family: var(--font-serif); font-size: 2rem; color: var(--accent2); }
+.stat-label { font-size: 0.75rem; color: var(--text2); margin-top: 0.25rem; text-transform: uppercase; letter-spacing: 0.06em; }
+
+.streak-display {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem;
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+.streak-number { font-family: var(--font-serif); font-size: 3rem; color: var(--yellow); }
+.streak-label { color: var(--text2); font-size: 0.85rem; }
+
+/* ── MODAL ── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 1rem;
+  display: none;
+}
+.modal-overlay.active { display: flex; }
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  padding: 2rem;
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.modal h2 { font-family: var(--font-serif); font-size: 1.4rem; margin-bottom: 1.5rem; }
+.modal-close {
+  float: right;
+  background: none;
+  border: none;
+  color: var(--text2);
+  font-size: 1.5rem;
+  cursor: pointer;
+  line-height: 1;
+}
+.modal-footer { display: flex; gap: 10px; justify-content: flex-end; margin-top: 1.5rem; }
+
+/* ── LOADING ── */
+.spinner {
+  width: 20px; height: 20px;
+  border: 2px solid rgba(255,255,255,0.15);
+  border-top-color: var(--accent2);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  display: inline-block;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.loading-bar {
+  width: 100%;
+  height: 3px;
+  background: var(--surface3);
+  border-radius: 2px;
+  margin: 1rem 0;
+  overflow: hidden;
+  display: none;
+}
+.loading-bar.active { display: block; }
+.loading-bar-inner {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
+  border-radius: 2px;
+  animation: loading 1.8s ease-in-out infinite;
+}
+@keyframes loading {
+  0% { width: 0; margin-left: 0; }
+  50% { width: 70%; margin-left: 15%; }
+  100% { width: 0; margin-left: 100%; }
+}
+
+.toast {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius-sm);
+  padding: 12px 18px;
+  font-size: 0.875rem;
+  z-index: 300;
+  transform: translateY(100px);
+  opacity: 0;
+  transition: all 0.3s cubic-bezier(0.4,0,0.2,1);
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.success { border-color: rgba(74,222,128,0.4); color: var(--green); }
+.toast.error { border-color: rgba(248,113,113,0.4); color: var(--red); }
+
+/* ── TAGS ── */
+.tag {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.tag-revisar { background: var(--yellow-bg); color: var(--yellow); }
+.tag-ok { background: var(--green-bg); color: var(--green); }
+
+@media (max-width: 600px) {
+  nav { padding: 0 1rem; }
+  .criar-options { grid-template-columns: 1fr; }
+  .answer-btns { grid-template-columns: 1fr; }
+  main { padding: 1.5rem 1rem; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">flash<span>ly</span></div>
+  <div class="nav-links">
+    <button class="nav-btn active" onclick="showPage('inicio')">Início</button>
+    <button class="nav-btn" onclick="showPage('baralhos')">Baralhos</button>
+    <button class="nav-btn" onclick="showPage('criar')">Criar</button>
+    <button class="nav-btn" onclick="showPage('progresso')">Progresso</button>
+  </div>
+  <button class="theme-toggle" id="theme-btn" onclick="toggleTheme()" title="Alternar tema">🌙</button>
+</nav>
+
+<main>
+
+  <!-- ── INÍCIO ── -->
+  <div id="page-inicio" class="page active">
+    <div class="hero">
+      <h1>Boa tarde, Felipe 👋</h1>
+      <p>Continue de onde parou.</p>
+    </div>
+
+    <div id="review-section">
+      <div class="review-meta">
+        <div>
+          <div class="label">Revisão do dia</div>
+          <div class="review-count" id="review-count">0</div>
+          <div style="color:var(--text2);font-size:0.82rem;margin-top:2px" id="review-subtitle">cards para revisar</div>
+        </div>
+        <button class="btn btn-primary" onclick="startReview()" id="start-review-btn">Revisar agora →</button>
+      </div>
+
+      <!-- FLIP CARD -->
+      <div class="flip-scene" id="flip-scene" onclick="flipCard()" style="display:none">
+        <div class="flip-card" id="flip-card">
+          <div class="card-face front">
+            <div class="card-label">Pergunta</div>
+            <div class="card-text" id="card-pergunta"></div>
+            <div class="card-hint">
+              <span style="opacity:0.5">↕</span> Clique para ver a resposta
+            </div>
+          </div>
+          <div class="card-face back">
+            <div class="card-label">Resposta</div>
+            <div class="card-text" id="card-resposta"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="answer-btns hidden" id="answer-btns">
+        <button class="answer-btn btn-hard" onclick="answer('dificil')">
+          Difícil
+          <span class="sub">+1 dia</span>
+        </button>
+        <button class="answer-btn btn-medium" onclick="answer('medio')">
+          Médio
+          <span class="sub">+3 dias</span>
+        </button>
+        <button class="answer-btn btn-easy" onclick="answer('facil')">
+          Fácil
+          <span class="sub">+7 dias</span>
+        </button>
+      </div>
+
+      <div class="completion" id="completion">
+        <div style="font-size:3rem;margin-bottom:1rem">🎉</div>
+        <h2>Revisão concluída!</h2>
+        <p id="completion-msg">Você revisou todos os cards de hoje.</p>
+        <button class="btn btn-primary" onclick="showPage('baralhos')">Ver baralhos</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── BARALHOS ── -->
+  <div id="page-baralhos" class="page">
+    <div class="baralhos-header">
+      <h2>Meus baralhos</h2>
+    </div>
+    <div class="baralhos-grid" id="baralhos-grid">
+      <div class="empty-state">
+        <h3>Nenhum baralho ainda</h3>
+        <p>Crie seu primeiro baralho na aba Criar.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── CRIAR ── -->
+  <div id="page-criar" class="page">
+    <h2 style="font-family:var(--font-serif);font-size:1.6rem;margin-bottom:1.5rem">Criar baralho</h2>
+
+    <div class="criar-options">
+      <div class="criar-option selected" id="opt-pdf" onclick="selectCriarMode('pdf')">
+        <div class="icon">📄</div>
+        <h3>Enviar PDF</h3>
+        <p>IA extrai e gera os cards</p>
+      </div>
+      <div class="criar-option" id="opt-texto" onclick="selectCriarMode('texto')">
+        <div class="icon">✍️</div>
+        <h3>Colar texto</h3>
+        <p>Cole suas anotações</p>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <label class="form-label">Título do baralho</label>
+      <input class="form-input" id="titulo-input" placeholder="Ex: Hermenêutica Jurídica — Métodos de Interpretação">
+    </div>
+
+    <div class="form-section">
+      <label class="form-label">Matéria</label>
+      <select class="form-select" id="materia-select">
+        <option value="">Selecione a matéria</option>
+        <option>Direito Civil</option>
+        <option>Direito Penal</option>
+        <option>Direito Constitucional</option>
+        <option>Direito Processual Civil</option>
+        <option>Direito Processual Penal</option>
+        <option>Direito Administrativo</option>
+        <option>Direito Tributário</option>
+        <option>Direito do Trabalho</option>
+        <option>Hermenêutica Jurídica</option>
+        <option>Direito Internacional</option>
+        <option>Outro</option>
+      </select>
+    </div>
+
+    <!-- PDF MODE -->
+    <div id="mode-pdf">
+      <div class="form-section">
+        <label class="form-label">Arquivo PDF</label>
+        <div class="upload-zone" id="upload-zone" onclick="document.getElementById('pdf-input').click()"
+          ondragover="event.preventDefault();this.classList.add('dragover')"
+          ondragleave="this.classList.remove('dragover')"
+          ondrop="handleDrop(event)">
+          <div class="upload-icon">📂</div>
+          <p>Clique para selecionar ou arraste o PDF aqui</p>
+          <input type="file" id="pdf-input" accept=".pdf" onchange="handleFileSelect(event)">
+        </div>
+        <div class="upload-status" id="upload-status"></div>
+      </div>
+    </div>
+
+    <!-- TEXTO MODE -->
+    <div id="mode-texto" style="display:none">
+      <div class="form-section">
+        <label class="form-label">Conteúdo</label>
+        <textarea class="form-textarea" id="texto-input" style="min-height:200px"
+          placeholder="Cole aqui suas anotações, resumos ou o conteúdo que deseja transformar em flashcards..."></textarea>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <label class="form-label">Quantidade de cards</label>
+      <select class="form-select" id="qtd-select">
+        <option value="10">10 cards</option>
+        <option value="20" selected>20 cards</option>
+        <option value="30">30 cards</option>
+        <option value="50">50 cards</option>
+      </select>
+    </div>
+
+    <div class="loading-bar" id="loading-bar"><div class="loading-bar-inner"></div></div>
+    <div id="loading-msg" style="font-size:0.82rem;color:var(--text2);margin-bottom:1rem;display:none"></div>
+
+    <button class="btn btn-primary btn-full" id="gerar-btn" onclick="gerarCards()">
+      ✨ Gerar flashcards com IA
+    </button>
+  </div>
+
+  <!-- ── PROGRESSO ── -->
+  <div id="page-progresso" class="page">
+    <h2 style="font-family:var(--font-serif);font-size:1.6rem;margin-bottom:1.5rem">Progresso</h2>
+
+    <div class="streak-display">
+      <div class="streak-number" id="streak-num">0</div>
+      <div class="streak-label">🔥 dias seguidos de revisão</div>
+    </div>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-value" id="stat-total">0</div>
+        <div class="stat-label">Cards totais</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-hoje">0</div>
+        <div class="stat-label">Revisados hoje</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-dominados">0</div>
+        <div class="stat-label">Dominados</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-baralhos">0</div>
+        <div class="stat-label">Baralhos</div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- MODAL DE CONFIRMAÇÃO -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">×</button>
+    <h2 id="modal-title">Confirmar</h2>
+    <p id="modal-body" style="color:var(--text2);font-size:0.9rem"></p>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal()">Cancelar</button>
+      <button class="btn btn-primary" id="modal-confirm-btn">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ── CONFIG ──
+const GEMINI_KEY = '__GEMINI_API_KEY__';
+const SUPABASE_URL = '__SUPABASE_URL__';
+const SUPABASE_KEY = '__SUPABASE_ANON_KEY__';
+
+// ── SUPABASE HELPER ──
+async function sb(path, method = 'GET', body = null, extra = {}) {
+  const opts = {
+    method,
+    headers: {
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
+      'Content-Type': 'application/json',
+      'Prefer': 'return=representation',
+      ...extra
+    }
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const r = await fetch(SUPABASE_URL + '/rest/v1/' + path, opts);
+  if (!r.ok) { const e = await r.json(); throw new Error(e.message || r.status); }
+  const text = await r.text();
+  return text ? JSON.parse(text) : null;
+}
+
+// ── STATE ──
+let reviewQueue = [];
+let reviewIndex = 0;
+let flipped = false;
+let criarMode = 'pdf';
+let pdfText = '';
+
+// ── NAV ──
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  event && event.target.classList.add('active');
+  if (name === 'baralhos') loadBaralhos();
+  if (name === 'inicio') loadReview();
+  if (name === 'progresso') loadProgresso();
+}
+
+// ── TOAST ──
+function toast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + type;
+  setTimeout(() => t.className = 'toast', 3000);
+}
+
+// ── MODAL ──
+let modalCallback = null;
+function openModal(title, body, onConfirm) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-body').textContent = body;
+  document.getElementById('modal-overlay').classList.add('active');
+  modalCallback = onConfirm;
+  document.getElementById('modal-confirm-btn').onclick = () => { closeModal(); onConfirm(); };
+}
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('active');
+}
+
+// ── BARALHOS ──
+async function loadBaralhos() {
+  const grid = document.getElementById('baralhos-grid');
+  grid.innerHTML = '<div style="color:var(--text3);padding:2rem">Carregando...</div>';
+  try {
+    const baralhos = await sb('baralhos?select=*,cards(count)&order=criado_em.desc');
+    if (!baralhos.length) {
+      grid.innerHTML = '<div class="empty-state"><h3>Nenhum baralho ainda</h3><p>Crie seu primeiro baralho na aba Criar.</p></div>';
+      return;
+    }
+    const hoje = new Date().toISOString().split('T')[0];
+    grid.innerHTML = '';
+    for (const b of baralhos) {
+      const total = b.cards[0]?.count || 0;
+      const revisar = await getCardsParaRevisar(b.id);
+      const div = document.createElement('div');
+      div.className = 'baralho-card';
+      div.innerHTML = `
+        <div class="baralho-materia">${b.materia || 'Geral'}</div>
+        <div class="baralho-titulo">${b.titulo}</div>
+        <div class="baralho-stats">
+          <div class="baralho-stat"><strong>${total}</strong> cards</div>
+          <div class="baralho-stat"><strong style="color:var(--yellow)">${revisar}</strong> pra revisar</div>
+        </div>
+        <div class="baralho-actions">
+          <button class="baralho-action-btn primary" onclick="startReviewBaralho('${b.id}','${b.titulo}')">Revisar</button>
+          <button class="baralho-action-btn" onclick="verCards('${b.id}','${b.titulo}')">Ver cards</button>
+          <button class="baralho-action-btn danger" onclick="deleteBaralho('${b.id}','${b.titulo}')">Excluir</button>
+        </div>`;
+      grid.appendChild(div);
+    }
+  } catch(e) { grid.innerHTML = `<div style="color:var(--red);padding:2rem">Erro: ${e.message}</div>`; }
+}
+
+async function getCardsParaRevisar(baralhoId) {
+  const hoje = new Date().toISOString().split('T')[0];
+  const cards = await sb(`cards?baralho_id=eq.${baralhoId}&proximo_revisao=lte.${hoje}&select=id`);
+  return cards.length;
+}
+
+async function deleteBaralho(id, titulo) {
+  openModal('Excluir baralho', `Tem certeza que deseja excluir "${titulo}"? Todos os cards serão perdidos.`, async () => {
+    await sb(`baralhos?id=eq.${id}`, 'DELETE');
+    toast('Baralho excluído');
+    loadBaralhos();
+  });
+}
+
+async function verCards(baralhoId, titulo) {
+  const cards = await sb(`cards?baralho_id=eq.${baralhoId}&select=*&order=criado_em`);
+  const modal = document.getElementById('modal-overlay');
+  document.getElementById('modal-title').textContent = titulo;
+  const body = document.getElementById('modal-body');
+  body.innerHTML = '';
+  body.style.maxHeight = '50vh';
+  body.style.overflow = 'auto';
+  for (const c of cards) {
+    const d = document.createElement('div');
+    d.style.cssText = 'padding:10px 0;border-bottom:1px solid var(--border);font-size:0.85rem';
+    d.innerHTML = `<strong style="color:var(--accent2)">${c.pergunta}</strong><br><span style="color:var(--text2)">${c.resposta}</span>`;
+    body.appendChild(d);
+  }
+  document.getElementById('modal-confirm-btn').style.display = 'none';
+  modal.classList.add('active');
+}
+
+// ── REVIEW ──
+async function loadReview() {
+  const hoje = new Date().toISOString().split('T')[0];
+  const cards = await sb(`cards?proximo_revisao=lte.${hoje}&select=*`);
+  reviewQueue = cards.sort(() => Math.random() - 0.5);
+  reviewIndex = 0;
+  document.getElementById('review-count').textContent = cards.length;
+  document.getElementById('start-review-btn').style.display = cards.length > 0 ? 'inline-flex' : 'none';
+  if (cards.length === 0) {
+    document.getElementById('review-subtitle').textContent = 'Tudo em dia! ✓';
+  }
+}
+
+function startReview() {
+  if (!reviewQueue.length) return;
+  document.getElementById('flip-scene').style.display = 'block';
+  document.getElementById('start-review-btn').style.display = 'none';
+  document.getElementById('completion').classList.remove('active');
+  showCard();
+}
+
+async function startReviewBaralho(id, titulo) {
+  const hoje = new Date().toISOString().split('T')[0];
+  const cards = await sb(`cards?baralho_id=eq.${id}&proximo_revisao=lte.${hoje}&select=*`);
+  if (!cards.length) { toast('Nenhum card para revisar hoje neste baralho', 'error'); return; }
+  reviewQueue = cards.sort(() => Math.random() - 0.5);
+  reviewIndex = 0;
+  showPage('inicio');
+  document.getElementById('flip-scene').style.display = 'block';
+  document.getElementById('start-review-btn').style.display = 'none';
+  document.getElementById('completion').classList.remove('active');
+  showCard();
+}
+
+function showCard() {
+  if (reviewIndex >= reviewQueue.length) {
+    endReview(); return;
+  }
+  const card = reviewQueue[reviewIndex];
+  flipped = false;
+  document.getElementById('flip-card').classList.remove('flipped');
+  document.getElementById('card-pergunta').textContent = card.pergunta;
+  document.getElementById('card-resposta').textContent = card.resposta;
+  document.getElementById('answer-btns').classList.add('hidden');
+  document.getElementById('review-count').textContent = reviewQueue.length - reviewIndex;
+}
+
+function flipCard() {
+  if (flipped) return;
+  flipped = true;
+  document.getElementById('flip-card').classList.add('flipped');
+  document.getElementById('answer-btns').classList.remove('hidden');
+}
+
+async function answer(resultado) {
+  const card = reviewQueue[reviewIndex];
+  const dias = resultado === 'facil' ? 7 : resultado === 'medio' ? 3 : 1;
+  const proxima = new Date();
+  proxima.setDate(proxima.getDate() + dias);
+  const proximaStr = proxima.toISOString().split('T')[0];
+
+  await sb(`cards?id=eq.${card.id}`, 'PATCH', {
+    proximo_revisao: proximaStr,
+    intervalo_dias: dias
+  });
+  await sb('progresso', 'POST', {
+    card_id: card.id,
+    resultado,
+    revisado_em: new Date().toISOString()
+  });
+
+  reviewIndex++;
+  showCard();
+}
+
+function endReview() {
+  document.getElementById('flip-scene').style.display = 'none';
+  document.getElementById('answer-btns').classList.add('hidden');
+  const comp = document.getElementById('completion');
+  comp.classList.add('active');
+  comp.style.display = 'block';
+  document.getElementById('completion-msg').textContent = `Você revisou ${reviewIndex} cards. Ótimo trabalho!`;
+}
+
+// ── CRIAR ──
+function selectCriarMode(mode) {
+  criarMode = mode;
+  document.getElementById('opt-pdf').classList.toggle('selected', mode === 'pdf');
+  document.getElementById('opt-texto').classList.toggle('selected', mode === 'texto');
+  document.getElementById('mode-pdf').style.display = mode === 'pdf' ? 'block' : 'none';
+  document.getElementById('mode-texto').style.display = mode === 'texto' ? 'block' : 'none';
+}
+
+function handleFileSelect(e) {
+  const file = e.target.files[0];
+  if (file) processPDF(file);
+}
+
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('upload-zone').classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file && file.type === 'application/pdf') processPDF(file);
+}
+
+async function processPDF(file) {
+  const status = document.getElementById('upload-status');
+  status.textContent = '⏳ Extraindo texto do PDF...';
+  status.classList.add('visible');
+  try {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    const arrayBuffer = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+    let text = '';
+    for (let i = 1; i <= Math.min(pdf.numPages, 30); i++) {
+      const page = await pdf.getPage(i);
+      const content = await page.getTextContent();
+      text += content.items.map(s => s.str).join(' ') + '\n';
+    }
+    pdfText = text.trim();
+    status.textContent = `✅ PDF lido: ${pdf.numPages} páginas, ${pdfText.length} caracteres`;
+    if (!document.getElementById('titulo-input').value) {
+      document.getElementById('titulo-input').value = file.name.replace('.pdf','');
+    }
+  } catch(e) {
+    status.textContent = '❌ Erro ao ler PDF: ' + e.message;
+  }
+}
+
+async function gerarCards() {
+  const titulo = document.getElementById('titulo-input').value.trim();
+  const materia = document.getElementById('materia-select').value;
+  const qtd = document.getElementById('qtd-select').value;
+
+  if (!titulo) { toast('Informe o título do baralho', 'error'); return; }
+
+  let conteudo = '';
+  if (criarMode === 'pdf') {
+    if (!pdfText) { toast('Envie um PDF primeiro', 'error'); return; }
+    conteudo = pdfText.substring(0, 15000);
+  } else {
+    conteudo = document.getElementById('texto-input').value.trim();
+    if (!conteudo) { toast('Cole algum texto primeiro', 'error'); return; }
+    conteudo = conteudo.substring(0, 15000);
+  }
+
+  const btn = document.getElementById('gerar-btn');
+  const bar = document.getElementById('loading-bar');
+  const msg = document.getElementById('loading-msg');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Gerando com IA...';
+  bar.classList.add('active');
+  msg.style.display = 'block';
+  msg.textContent = 'Enviando para o Gemini Flash...';
+
+  try {
+    const prompt = `Você é um especialista em criação de flashcards para estudo de direito brasileiro.
+Analise o texto abaixo e gere exatamente ${qtd} flashcards de alta qualidade para fixação do conteúdo.
+Foque nos conceitos mais importantes, definições, elementos essenciais, distinções e princípios.
+Responda APENAS com um array JSON válido, sem markdown, sem explicações. Formato:
+[{"pergunta":"...","resposta":"..."}]
+
+TEXTO:
+${conteudo}`;
+
+    const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${GEMINI_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.4, maxOutputTokens: 8192 }
+      })
+    });
+
+    if (!resp.ok) throw new Error('Erro na API Gemini: ' + resp.status);
+    const data = await resp.json();
+    const raw = data.candidates[0].content.parts[0].text;
+    const clean = raw.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
+    const cards = JSON.parse(clean);
+
+    msg.textContent = 'Salvando no Supabase...';
+
+    // Cria baralho
+    const [baralho] = await sb('baralhos', 'POST', { titulo, materia: materia || 'Geral' });
+
+    // Insere cards em lote
+    const cardsData = cards.map(c => ({
+      baralho_id: baralho.id,
+      pergunta: c.pergunta,
+      resposta: c.resposta,
+      proximo_revisao: new Date().toISOString().split('T')[0],
+      intervalo_dias: 1
+    }));
+    await sb('cards', 'POST', cardsData);
+
+    toast(`✅ ${cards.length} cards criados com sucesso!`);
+
+    // Reset form
+    document.getElementById('titulo-input').value = '';
+    document.getElementById('materia-select').value = '';
+    document.getElementById('pdf-input').value = '';
+    document.getElementById('texto-input').value = '';
+    document.getElementById('upload-status').textContent = '';
+    document.getElementById('upload-status').classList.remove('visible');
+    pdfText = '';
+
+    showPage('baralhos');
+
+  } catch(e) {
+    toast('Erro: ' + e.message, 'error');
+    console.error(e);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '✨ Gerar flashcards com IA';
+    bar.classList.remove('active');
+    msg.style.display = 'none';
+  }
+}
+
+// ── PROGRESSO ──
+async function loadProgresso() {
+  try {
+    const hoje = new Date().toISOString().split('T')[0];
+    const [totalCards] = await Promise.all([
+      sb('cards?select=count', 'GET', null, { 'Prefer': 'count=exact' })
+    ]);
+
+    const cards = await sb('cards?select=id,proximo_revisao,intervalo_dias');
+    const total = cards.length;
+    const dominados = cards.filter(c => c.intervalo_dias >= 7).length;
+
+    const baralhos = await sb('baralhos?select=count', 'GET', null, { 'Prefer': 'count=exact' });
+
+    const hojeRevisados = await sb(`progresso?revisado_em=gte.${hoje}T00:00:00&select=id`);
+
+    document.getElementById('stat-total').textContent = total;
+    document.getElementById('stat-hoje').textContent = hojeRevisados.length;
+    document.getElementById('stat-dominados').textContent = dominados;
+
+    // streak simples
+    const progs = await sb('progresso?select=revisado_em&order=revisado_em.desc&limit=60');
+    const dias = [...new Set(progs.map(p => p.revisado_em.split('T')[0]))];
+    let streak = 0;
+    const d = new Date();
+    for (let i = 0; i < dias.length; i++) {
+      const esperado = new Date(d);
+      esperado.setDate(d.getDate() - i);
+      const esperadoStr = esperado.toISOString().split('T')[0];
+      if (dias.includes(esperadoStr)) streak++;
+      else break;
+    }
+    document.getElementById('streak-num').textContent = streak;
+
+    const nBaralhos = await sb('baralhos?select=id');
+    document.getElementById('stat-baralhos').textContent = nBaralhos.length;
+
+  } catch(e) { console.error(e); }
+}
+
+// ── TEMA ──
+function toggleTheme() {
+  const html = document.documentElement;
+  const btn = document.getElementById('theme-btn');
+  const isLight = html.classList.toggle('light');
+  btn.textContent = isLight ? '☀️' : '🌙';
+  localStorage.setItem('flashly-theme', isLight ? 'light' : 'dark');
+}
+
+function initTheme() {
+  const saved = localStorage.getItem('flashly-theme');
+  if (saved === 'light') {
+    document.documentElement.classList.add('light');
+    document.getElementById('theme-btn').textContent = '☀️';
+  }
+}
+
+// ── INIT ──
+initTheme();
+loadReview();
+</script>
+</body>
+</html>
