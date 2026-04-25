@@ -1090,14 +1090,22 @@ Responda APENAS com um array JSON válido, sem markdown, sem explicações. Form
 TEXTO:
 ${conteudo}`;
 
-    const resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.4, maxOutputTokens: 8192 }
-      })
-    });
+    let resp, tentativas = 0;
+    while (tentativas < 3) {
+      resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+          generationConfig: { temperature: 0.4, maxOutputTokens: 8192 }
+        })
+      });
+      if (resp.status === 429) {
+        tentativas++;
+        msg.textContent = `Limite atingido, aguardando ${tentativas * 15}s...`;
+        await new Promise(r => setTimeout(r, tentativas * 15000));
+      } else break;
+    }
 
     if (!resp.ok) throw new Error('Erro na API Gemini: ' + resp.status);
     const data = await resp.json();
