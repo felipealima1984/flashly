@@ -17,17 +17,20 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      name: Inject environment variables
+      - name: Inject environment variables
         run: |
-          sed -i "s|__GEMINI_API_KEY__|${{ secrets.GEMINI_API_KEY }}|g" src/index.html
-          sed -i "s|__SUPABASE_URL__|${{ secrets.SUPABASE_URL }}|g" src/index.html
-          sed -i "s|__SUPABASE_ANON_KEY__|${{ secrets.SUPABASE_ANON_KEY }}|g" src/index.html
-          echo "--- Verificando substituição ---"
-          grep -c "GEMINI_API_KEY" src/index.html && echo "FALHOU: placeholder ainda presente" || echo "OK: placeholder substituído"
+          sed -i "s|__GEMINI_API_KEY__|${GEMINI_API_KEY}|g" src/index.html
+          sed -i "s|__SUPABASE_URL__|${SUPABASE_URL}|g" src/index.html
+          sed -i "s|__SUPABASE_ANON_KEY__|${SUPABASE_ANON_KEY}|g" src/index.html
+          grep -q "__GEMINI_API_KEY__" src/index.html && echo "FALHOU" || echo "OK substituído"
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
