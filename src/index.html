@@ -1105,7 +1105,7 @@ ${conteudo}`;
       })
     });
 
-    if (!resp.ok) throw new Error('Erro na API Claude: ' + resp.status);
+    if (!resp.ok) { const err = await resp.json(); throw new Error(JSON.stringify(err)); }
     const data = await resp.json();
     const raw = data.content[0].text;
     const clean = raw.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
