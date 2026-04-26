@@ -797,7 +797,7 @@ main { max-width: 860px; margin: 0 auto; padding: 2rem 1.5rem; }
 
 <script>
 // ── CONFIG ──
-const GEMINI_KEY = '__GEMINI_API_KEY__';
+const ANTHROPIC_KEY = '__ANTHROPIC_API_KEY__';
 const SUPABASE_URL = '__SUPABASE_URL__';
 const SUPABASE_KEY = '__SUPABASE_ANON_KEY__';
 
@@ -1078,7 +1078,7 @@ async function gerarCards() {
   btn.innerHTML = '<span class="spinner"></span> Gerando com IA...';
   bar.classList.add('active');
   msg.style.display = 'block';
-  msg.textContent = 'Enviando para o Gemini Flash...';
+  msg.textContent = 'Enviando para o Claude...';
 
   try {
     const prompt = `Você é um especialista em criação de flashcards para estudo de direito brasileiro.
@@ -1090,26 +1090,24 @@ Responda APENAS com um array JSON válido, sem markdown, sem explicações. Form
 TEXTO:
 ${conteudo}`;
 
-    let resp, tentativas = 0;
-    while (tentativas < 3) {
-      resp = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-lite:generateContent?key=${GEMINI_KEY}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.4, maxOutputTokens: 8192 }
-        })
-      });
-      if (resp.status === 429) {
-        tentativas++;
-        msg.textContent = `Limite atingido, aguardando ${tentativas * 15}s...`;
-        await new Promise(r => setTimeout(r, tentativas * 15000));
-      } else break;
-    }
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': ANTHROPIC_KEY,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5',
+        max_tokens: 8192,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
 
-    if (!resp.ok) throw new Error('Erro na API Gemini: ' + resp.status);
+    if (!resp.ok) throw new Error('Erro na API Claude: ' + resp.status);
     const data = await resp.json();
-    const raw = data.candidates[0].content.parts[0].text;
+    const raw = data.content[0].text;
     const clean = raw.replace(/```json\n?/g,'').replace(/```\n?/g,'').trim();
     const cards = JSON.parse(clean);
 
